@@ -1,0 +1,1 @@
+0 8 * * * cd /home/pigo/文件/python/AI_News && source venv/bin/activate && python AI_News.py -t "美國財經新聞分析 - $(date +\%Y年\%m月\%d日)" >> logs/cron.log 2>&1

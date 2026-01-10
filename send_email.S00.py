@@ -1,0 +1,48 @@
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+import ssl
+import csv
+
+def send_email(filename):
+    fromaddr = "pigo@pigowen.serv00.net"  # Your Gmail address
+    toaddr = "pigowen@gmail.com"  # Recipient's email address
+
+    msg = MIMEMultipart()
+    body =""
+    msg['From'] = fromaddr
+    msg['To'] = toaddr
+    msg['Subject'] = "Translated News Title from S5.serv00"  # Email subject
+    try:
+        with open(filename, 'r', newline='', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            for row in reader:
+                csv_content = '\n'.join('\n'.join(row) for row in reader)  # 將 CSV 內容轉換為字串
+    except FileNotFoundError:
+        print("File not found.") 
+    body = csv_content
+    #body = "Please find attached the translated news titles."  # Email body
+    #print(body)
+    msg.attach(MIMEText(body, 'plain'))
+
+    # Attach the CSV file
+    #filename = "path_to_your_file.csv"  # Replace with the actual path to your CSV file
+    attachment = open(filename, "rb")
+    part = MIMEBase('application', 'octet-stream')
+    part.set_payload((attachment).read())
+    encoders.encode_base64(part)
+    part.add_header('Content-Disposition', "attachment; filename= %s" % filename)
+    msg.attach(part)
+
+    # Connect to Gmail SMTP server with SSL
+    context = ssl.create_default_context()
+    #server = smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context)
+    server = smtplib.SMTP_SSL('mail5.serv00.com', 465, context=context)
+    #server.login(fromaddr, "")  
+    # Your Gmail password
+    server.login(fromaddr, "3!qX%XsEBECO)ShNEhaS")  # Your Gmail password
+    text = msg.as_string()
+    server.sendmail(fromaddr, toaddr, text)
+    server.quit()

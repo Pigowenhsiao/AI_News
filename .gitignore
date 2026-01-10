@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual Environment
+venv/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+financial_reports/*.md
+
+# Output
+output/*.html
+
+# IDE
+.vscode/
+.idea/
+*.swo
+.DS_Store
+
+# Removable files (testing/backup files)
+removable/
+
+# Original scripts (moved to removable/)
+Gemini_AI_Search.py
+
+# OpenSpec
+openspec/changes/*/tasks.md
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+.venv/

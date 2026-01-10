@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 1.8rem; margin-bottom: 10px; }
+        .header .meta { 
+            font-size: 0.9rem; 
+            opacity: 0.9; 
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .header .meta-item { display: flex; align-items: center; gap: 5px; }
+        .header .meta-label { font-weight: 500; opacity: 0.8; }
+        .header .meta-value { font-weight: 600; }
+        
+        .header .time-status {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 4px;
+            display: inline-block;
+            color: #ffffff;
+        }
+        .header .time-status.updating { color: #ff9800; animation: pulse 2s infinite; }
+        .header .time-status.ok { color: #ffffff; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .market-summary {
+            background: #e3f2fd;
+            padding: 20px;
+            border-left: 4px solid #2196f3;
+            margin: 20px;
+        }
+        .market-summary h3 { color: #1976d2; margin-bottom: 10px; }
+        .article {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .article:last-child { border-bottom: none; }
+        .article h2 {
+            color: #333;
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+        }
+        .article .meta {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+        }
+        .article .meta a { color: #2196f3; text-decoration: none; }
+        .article .meta a:hover { text-decoration: underline; }
+        .section { margin: 15px 0; }
+        .section h3 { color: #555; font-size: 1.1rem; margin-bottom: 8px; }
+        .section-content { padding-left: 15px; color: #444; }
+        .comment {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            border-left: 3px solid #ff9800;
+        }
+        .comment h3 { color: #e65100; }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 0.85rem;
+            border-top: 1px solid #eee;
+        }
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .header { padding: 20px; }
+            .header h1 { font-size: 1.4rem; }
+            .article { padding: 15px; }
+            .header .meta { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ title }}</h1>
+            <div class="meta">
+                <div class="meta-item">
+                    <span class="meta-label">🤖 AI 模型:</span>
+                    <span class="meta-value">{{ ai_model }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">🖥 主機:</span>
+                    <span class="meta-value">{{ hostname }}</span>
+                </div>
+            </div>
+            <div class="meta">
+                <div class="meta-item">
+                    <span class="meta-label">📄 生成時間:</span>
+                    <span class="meta-value" id="generation-time">{{ html_gen_time }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">📝 文章日期:</span>
+                    <span class="meta-value">{{ article_gen_time }}</span>
+                </div>
+            </div>
+            <div id="time-status" class="time-status ok">
+                <span id="time-text">🕒 時間更新中...</span>
+            </div>
+        </div>
+
+        {% if market_summary_html %}
+        <div class="market-summary">
+            <h3>📊 本日市場總評</h3>
+            <div class="section-content">{{ market_summary_html }}</div>
+        </div>
+        {% endif %}
+
+        {% for article in articles %}
+        <article class="article">
+            <h2>{{ loop.index }}. {{ article.title }}</h2>
+            <div class="meta">
+                📅 {{ article.date }} | 📰 來源: <a href="{{ article.url }}" target="_blank">{{ article.source }}</a>
+            </div>
+            <div class="section">
+                <h3>📝 內容</h3>
+                <div class="section-content">{{ article.content_html }}</div>
+            </div>
+            {% if article.comment_html %}
+            <div class="comment">
+                <h3>💡 專業評論</h3>
+                <div class="section-content">{{ article.comment_html }}</div>
+            </div>
+            {% endif %}
+        </article>
+        {% endfor %}
+
+        <div class="footer">
+            <p>AI News 分析系統 | 主機: {{ hostname }} | 文章時間: {{ article_gen_time }}</p>
+            <p>&copy; {{ current_year }} Generated by AI News Analysis System</p>
+        </div>
+    </div>
+
+    <script>
+        // 時間更新功能
+        const generationTime = "{{ html_gen_time }}";
+        const articleTime = "{{ article_gen_time }}";
+        const timeStatusEl = document.getElementById('time-status');
+        const timeTextEl = document.getElementById('time-text');
+        
+        function updateTime() {
+            const now = new Date();
+            
+            // 格式化時間
+            const timeStr = now.toLocaleString('zh-TW', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            
+            // 更新狀態
+            timeTextEl.textContent = '🕒 ' + timeStr;
+            timeStatusEl.className = 'time-status ok';
+        }
+        
+        // 初始更新
+        updateTime();
+        
+        // 每秒更新一次
+        const timer = setInterval(updateTime, 1000);
+        
+        // 頁面可見時啟動，隱藏時暫停以節省資源
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                updateTime();
+                timeStatusEl.classList.remove('updating');
+            } else {
+                timeStatusEl.classList.add('updating');
+            }
+        });
+        
+        // 頁面關閉時清除定時器
+        window.addEventListener('beforeunload', function() {
+            clearInterval(timer);
+        });
+    </script>
+</body>
+</html>

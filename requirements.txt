@@ -1,0 +1,7 @@
+# requirements.txt
+requests
+beautifulsoup4
+# 如果採納了建議，也加入下面這些
+Jinja2
+markdown
+trafilatura
