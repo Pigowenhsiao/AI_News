@@ -49,6 +49,34 @@ class NewsCrawler:
         url = article.get("url", "")
         source_domain = article.get("source_domain", "")
         self.logger.debug(f"嘗試爬取: {url}")
+
+        if "bloomberg.com" in source_domain:
+            try:
+                text = self._crawl_with_crawl4ai(url)
+                if text and len(text) > self.config.ARTICLE_MIN_LENGTH:
+                    self.logger.info(f"Bloomberg 使用 crawl4ai 成功: {url}")
+                    return self._clean_control_characters(self._clean_text(text))
+            except Exception as e:
+                self.logger.warning(f"Bloomberg crawl4ai 爬取失敗: {url} - {e}")
+
+            try:
+                text = self._scrape_with_enhanced_headers(url, source_domain)
+                if text and len(text) > self.config.ARTICLE_MIN_LENGTH:
+                    self.logger.info(f"Bloomberg 使用改進請求頭成功: {url}")
+                    return self._clean_control_characters(self._clean_text(text))
+            except Exception as e:
+                self.logger.warning(f"Bloomberg 改進請求頭爬取失敗: {url} - {e}")
+
+            if self.config.TAVILY_API_KEY:
+                try:
+                    text = self._scrape_with_tavily(url)
+                    if text and len(text) > self.config.ARTICLE_MIN_LENGTH:
+                        self.logger.info(f"Bloomberg 使用 Tavily 成功: {url}")
+                        return self._clean_control_characters(self._clean_text(text))
+                except Exception as e:
+                    self.logger.warning(f"Bloomberg Tavily 爬取失敗: {url} - {e}")
+            return None
+
         if "cnn.com" in source_domain and self.config.TAVILY_API_KEY:
             try:
                 text = self._scrape_with_tavily(url)
@@ -110,6 +138,45 @@ class NewsCrawler:
             self.logger.warning(f"Tavily API 呼叫失敗: {url} - {e}")
         return None
 
+    def _scrape_with_enhanced_headers(
+        self, url: str, source_domain: str
+    ) -> Optional[str]:
+        enhanced_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8,zh-TW;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Cache-Control": "max-age=0",
+            "Referer": "https://www.bloomberg.com/",
+        }
+
+        res = requests.get(
+            url, headers=enhanced_headers, timeout=self.config.SCRAPE_TIMEOUT
+        )
+        res.raise_for_status()
+        soup = BeautifulSoup(res.text, "html.parser")
+
+        if "bloomberg.com" in source_domain:
+            text = self._extract_bloomberg_text(soup)
+        elif "cnbc.com" in source_domain:
+            text = self._extract_cnbc_text(soup)
+        elif "cnn.com" in source_domain:
+            text = self._extract_cnn_business_text(soup)
+        else:
+            article_tag = soup.find("article")
+            if article_tag:
+                text = article_tag.get_text(separator=" ", strip=True)
+            else:
+                body_tag = soup.find("body")
+                text = body_tag.get_text(separator=" ", strip=True) if body_tag else ""
+        return text
+
     def _scrape_with_beautifulsoup(self, url: str, source_domain: str) -> Optional[str]:
         headers = self.config.RSS_REQUEST_HEADERS
         res = requests.get(url, headers=headers, timeout=self.config.SCRAPE_TIMEOUT)
@@ -135,6 +202,18 @@ class NewsCrawler:
             "div#ArticleBody",
             "div.group",
             "article",
+        ]
+        return self._extract_text_by_selectors(soup, selectors)
+
+    def _extract_bloomberg_text(self, soup: BeautifulSoup) -> Optional[str]:
+        selectors = [
+            "div[class*='body-text']",
+            "div[class*='article-content']",
+            "article[class*='article']",
+            "div[data-component='articleBody']",
+            "section[data-type='article-body']",
+            "div.body-text-v2__body-text",
+            "div.body-text",
         ]
         return self._extract_text_by_selectors(soup, selectors)
 

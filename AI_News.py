@@ -113,6 +113,10 @@ class AI_News_Agent:
             self.logger.info(
                 f"--- [步驟 4.{i}/6] 正在分析第 {i}/{len(articles)} 篇新聞..."
             )
+            self.logger.info(
+                f"📰 標題: {article['title'][:80]}{'...' if len(article['title']) > 80 else ''}"
+            )
+            self.logger.info(f"📍 來源: {display_name} ({article['source_domain']})")
 
             analyzed_part = self.ai_client.call(
                 full_prompt, self.config.ANALYSIS_OUTPUT_MODEL
