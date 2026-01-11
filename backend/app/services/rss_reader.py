@@ -16,32 +16,86 @@ class RSSReader:
         self.logger.info("--- [步驟 1/6] 從多個新聞來源獲取新聞列表...")
         items: List[Dict[str, str]] = []
 
-        # CNBC RSS (保持使用 RSS)
+        # CNBC 使用 RSS (內容完整，不需要再爬取)
         for feed_url in self.config.CNBC_RSS_URLS:
-            items.extend(
-                self._fetch_rss(feed_url, "CNBC", self.config.MAX_ARTICLES_PER_SOURCE)
+            rss_items = self._fetch_rss(
+                feed_url, "CNBC", self.config.MAX_ARTICLES_PER_SOURCE
             )
+            # 為 CNBC 的 RSS item 標記已有完整內容
+            for item in rss_items:
+                item["has_full_content"] = True  # 標記已有完整內容
+            items.extend(rss_items)
 
-        # 使用 Tavily 搜尋其他網站的新聞
+        # 其他來源使用 Crawl 爬取完整的新聞（不用 RSS）
         items.extend(
-            self._search_with_tavily(
+            self._crawl_website_articles(
                 "Bloomberg", "bloomberg.com", self.config.MAX_ARTICLES_PER_SOURCE
             )
         )
         items.extend(
-            self._search_with_tavily(
+            self._crawl_website_articles(
                 "Fortune", "fortune.com", self.config.MAX_ARTICLES_PER_SOURCE
             )
         )
         items.extend(
-            self._search_with_tavily(
+            self._crawl_website_articles(
                 "Yahoo Finance",
                 "finance.yahoo.com",
                 self.config.MAX_ARTICLES_PER_SOURCE,
             )
         )
         items.extend(
-            self._search_with_tavily(
+            self._crawl_website_articles(
+                "MarketWatch", "marketwatch.com", self.config.MAX_ARTICLES_PER_SOURCE
+            )
+        )
+
+        # 其他來源使用 RSS 獲取列表（即使內容不完整，由 NewsCrawler 後續爬取完整內容）
+        for feed_url in self.config.BLOOMBERG_RSS_URLS:
+            items.extend(
+                self._fetch_rss(
+                    feed_url, "Bloomberg", self.config.MAX_ARTICLES_PER_SOURCE
+                )
+            )
+        for feed_url in self.config.FORTUNE_RSS_URLS:
+            items.extend(
+                self._fetch_rss(
+                    feed_url, "Fortune", self.config.MAX_ARTICLES_PER_SOURCE
+                )
+            )
+        for feed_url in self.config.YAHOO_FINANCE_RSS_URLS:
+            items.extend(
+                self._fetch_rss(
+                    feed_url, "Yahoo Finance", self.config.MAX_ARTICLES_PER_SOURCE
+                )
+            )
+        for feed_url in self.config.MARKETWATCH_RSS_URLS:
+            items.extend(
+                self._fetch_rss(
+                    feed_url, "MarketWatch", self.config.MAX_ARTICLES_PER_SOURCE
+                )
+            )
+
+        # 其他來源使用 Crawl 爬取 (RSS 內容不完整)
+        items.extend(
+            self._crawl_website_articles(
+                "Bloomberg", "bloomberg.com", self.config.MAX_ARTICLES_PER_SOURCE
+            )
+        )
+        items.extend(
+            self._crawl_website_articles(
+                "Fortune", "fortune.com", self.config.MAX_ARTICLES_PER_SOURCE
+            )
+        )
+        items.extend(
+            self._crawl_website_articles(
+                "Yahoo Finance",
+                "finance.yahoo.com",
+                self.config.MAX_ARTICLES_PER_SOURCE,
+            )
+        )
+        items.extend(
+            self._crawl_website_articles(
                 "MarketWatch", "marketwatch.com", self.config.MAX_ARTICLES_PER_SOURCE
             )
         )
@@ -135,61 +189,130 @@ class RSSReader:
 
         return re.sub(r"\s+", " ", text).strip() if text else ""
 
-    def _search_with_tavily(
+    # _search_with_tavily() 方法已棄用 - 改用 _crawl_website_articles()
+
+    def _crawl_website_articles(
         self, source_name: str, domain: str, limit: int
     ) -> List[Dict[str, str]]:
+        """爬取網站新聞列表（用於非 CNBC 來源）"""
         try:
-            tavily_api_url = "https://api.tavily.com/search"
-            from datetime import datetime, timedelta
+            import requests
+            from bs4 import BeautifulSoup
+            from datetime import datetime
+            import re
 
-            yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-
-            payload = {
-                "api_key": self.config.TAVILY_API_KEY,
-                "query": f"site:{domain} business finance news {yesterday}",
-                "search_depth": "advanced",
-                "max_results": limit * 2,
-                "include_domains": [domain],
+            # 根據域名設定目標 URL
+            domain_urls = {
+                "bloomberg.com": "https://www.bloomberg.com/markets",
+                "fortune.com": "https://fortune.com",
+                "finance.yahoo.com": "https://finance.yahoo.com/news",
+                "marketwatch.com": "https://www.marketwatch.com",
             }
-            response = requests.post(
-                tavily_api_url, json=payload, timeout=self.config.SCRAPE_TIMEOUT
-            )
-            response.raise_for_status()
-            data = response.json()
+
+            url = domain_urls.get(domain)
+            if not url:
+                self.logger.warning(f"未知域名: {domain}")
+                return []
+
+            # 增強請求頭，模擬真實瀏覽器
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8,zh-TW;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Cache-Control": "max-age=0",
+            }
+
+            res = requests.get(url, headers=headers, timeout=self.config.SCRAPE_TIMEOUT)
+            res.raise_for_status()
+            soup = BeautifulSoup(res.text, "html.parser")
 
             items = []
+            article_links = []
+
+            # 根據不同網站使用不同的選擇器
+            if "bloomberg.com" in domain:
+                article_links = soup.select("a[data-component='link']")
+            elif "fortune.com" in domain:
+                article_links = soup.select("a[href^='/']")
+            elif "finance.yahoo.com" in domain:
+                article_links = soup.select("h3 a")
+            elif "marketwatch.com" in domain:
+                article_links = soup.select("h3 a, article a")
+
+            # 去重和過濾
             seen_urls = set()
 
-            if data.get("results"):
-                for result in data["results"][:limit]:
-                    url = result.get("url", "")
-                    title = result.get("title", "")
-                    content = result.get("content", "")
+            for link in article_links:
+                href = link.get("href")
+                href = str(href) if href else ""
 
-                    if not url or not title or url in seen_urls:
+                if not href.startswith("http"):
+                    # 處理相對路徑
+                    if href.startswith("/"):
+                        href = f"https://{domain}{href}"
+                    else:
                         continue
 
-                    seen_urls.add(url)
+                # 過濾條件
+                if href in seen_urls:
+                    continue
 
-                    items.append(
-                        {
-                            "title": title,
-                            "url": url,
-                            "description": content[:200] + "..."
-                            if len(content) > 200
-                            else content,
-                            "source_domain": domain,
-                            "source_name": source_name,
-                            "published": datetime.now().strftime("%Y-%m-%d"),
-                        }
-                    )
+                title = link.get_text(strip=True)
+
+                # 過濾無效標題
+                if not title or len(title) < 30:
+                    continue
+
+                # 過濾圖片/媒體連結
+                skip_keywords = [
+                    "gettyimages",
+                    "reuters.com/media",
+                    "images.",
+                    "/gallery/",
+                    "/video/",
+                    "mailto:",
+                    "javascript:",
+                ]
+
+                skip = False
+                for keyword in skip_keywords:
+                    if keyword in href.lower():
+                        skip = True
+                        break
+
+                if skip:
+                    continue
+
+                seen_urls.add(href)
+
+                items.append(
+                    {
+                        "title": title,
+                        "url": href,
+                        "description": "",  # 空描述，內容由 NewsCrawler 爬取
+                        "source_domain": domain,
+                        "source_name": source_name,
+                        "published": datetime.now().strftime("%Y-%m-%d"),
+                    }
+                )
+
+                if len(items) >= limit:
+                    break
 
             if items:
-                self.logger.info(f"從 {source_name} (Tavily) 獲取 {len(items)} 篇新聞")
+                self.logger.info(f"從 {source_name} 網站爬取 {len(items)} 篇新聞")
+
             return items
 
         except Exception as e:
-            self.logger.warning(f"從 {source_name} 搜尋失敗: {e}")
+            self.logger.warning(f"從 {source_name} 網站爬取失敗: {e}")
             return []
 
     def _fetch_cnn_web_articles(self, limit: int) -> List[Dict[str, str]]:

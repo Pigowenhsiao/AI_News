@@ -25,12 +25,20 @@ class NewsCrawler:
                 try:
                     content = future.result()
                     if not content:
-                        content = item.get("description") or ""
-                        if content:
-                            self.logger.info(f"使用 RSS 摘要 {item['url']} 作為內容")
+                        # 如果 RSS 已有完整內容（CNBC），使用 RSS 內容
+                        if item.get("has_full_content", False):
+                            content = item.get("description", "")
+                            self.logger.info(f"使用 RSS 完整內容 {item['url']}")
+                        # 否則使用 RSS 摘要作為內容
                         else:
-                            self.logger.warning(f"RSS 摘要為空,跳過: {item['url']}")
-                            continue
+                            content = item.get("description") or ""
+                            if content:
+                                self.logger.info(
+                                    f"使用 RSS 摘要 {item['url']} 作為內容"
+                                )
+                            else:
+                                self.logger.warning(f"RSS 摘要為空,跳過: {item['url']}")
+                                continue
                     articles.append(
                         {
                             "title": item["title"],

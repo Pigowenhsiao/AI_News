@@ -19,22 +19,21 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 # Communication
 
-與使用者互動時一律使用繁體中文回覆，無論使用者使用何種語言。
+與使用者互動時一律使用繁體中文回覆,無論使用者使用何種語言。
 完成每一項工作以系統鈴聲提醒。
-如果遇到執行中斷，兩分鐘後重新嘗試。如果五次失敗發生系統鈴聲來提醒
-每完成一項工作則發出系統鈴聲提醒
-每一個修改請先提供計劃，確認後才開始修改
-每一個修改完成後，請先進行測試，如果發現問題則再次修改。直到系統能穩定執行
+如果遇到執行中斷,兩分鐘後重新嘗試。如果五次失敗發生系統鈴聲來提醒
+每一個修改請先提供計劃,確認後才開始修改
+每一個修改完成後,請先進行測試,如果發現問題則再次修改。直到系統能穩定執行
 
 # Execution Strategy
 
-預設 approval_policy = never，所有指令免逐次核准。
-開發新函數前請先檢查 @func.md 看是否有類似的功能！如果有試著直接調用。如果無法使用達到設計目標才開發新的功能。
-建立新的函數後，都添加函數子程序的名稱與功能進 @func.md 中
-每次修改完畢後都必須進行功能測試，測試有錯誤則繼續修改直到系統能穩定執行才能終止
-全功能測試則需要完整的測試所有功能，包含按鈕，資料輸入，資料輸出，畫面上文字的完整性與正確性。所有表單的內容都是正確無誤。
+預設 approval_policy = never,所有指令免逐次核准。
+開發新函數前請先檢查 @func.md 看是否有類似的功能!如果有試著直接調用。如果無法使用達到設計目標才開發新的功能。
+建立新的函數後,都添加函數子程序的名稱與功能進 @func.md 中
+每次修改完畢後都必須進行功能測試,測試有錯誤則繼續修改直到系統能穩定執行才能終止
+全功能測試則需要完整的測試所有功能,包含按鈕、資料輸入、資料輸出、畫面上文字的完整性與正確性。所有表單的內容都是正確無誤。
 
-# Execution Environment (for future collaboration)
+# Execution Environment
 
 sandbox_mode: danger-full-access
 approval_policy: never, 所有指令免逐次審核
@@ -42,70 +41,123 @@ network_access: full accessed
 
 # Build, Lint, Test Commands
 
-This project uses OpenSpec for spec-driven development. Currently, no build/test/lint configuration is set up.
-
-Update this section with actual commands when code is added:
 ```bash
-# Build
-npm run build  # or python -m build, or cargo build, etc.
+# API 啟動 (開發模式)
+cd /path/to/AI_News
+source venv/bin/activate
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 
-# Lint
-npm run lint   # or ruff check ., or pylint, etc.
+# API 啟動 (生產模式)
+gunicorn backend.app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
 
-# Format
-npm run format # or black ., or prettier --write .
+# 執行主程序 (新聞爬取與分析)
+python AI_News.py -t "主題標題" -o /path/to/output
 
-# Tests
-npm test               # Run all tests
-npm test path/to/test  # Run single test file
-pytest tests/test_x.py  # Python: run single test file
-pytest tests/test_x.py::test_func  # Python: run single test function
+# 安裝依賴
+pip install -r requirements.txt
+pip install -r backend/requirements.txt
+
+# 安裝 Playwright 瀏覽器 (Crawl4AI 需要)
+playwright install chromium
 ```
+
+**測試**:目前使用獨立腳本測試 (如 test_cnn_crawling.py),而非 pytest/unittest 套件。
+執行測試腳本前確認虛擬環境已啟動。
 
 # Code Style Guidelines
 
 ## Imports
-- Import standard library first, then third-party, then local modules
-- Use absolute imports when available
-- Avoid wildcard imports
+- 順序:標準庫 → 第三方庫 → 本地模組
+- 使用絕對導入: `from backend.app.core.config import Config`
+- 避免通配符導入 (`from module import *`)
+- 在入口點使用 `sys.path.insert(0, ...)` 確保模組可見性
+
+**示例**:
+```python
+# 標準庫
+import os
+import sys
+from pathlib import Path
+
+# 第三方庫
+import requests
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+# 本地模組
+from backend.app.core.config import Config
+from backend.app.services.news_crawler import NewsCrawler
+```
 
 ## Formatting
-- Use [formatter] with [config]
-- Max line length: [N] characters
-- Indent with [spaces/tabs]
-- Trailing commas for multi-line structures
+- 使用 4 空格縮排
+- 行長度:無強制限制,但建議不超過 120 字符
+- 多行結構使用尾隨逗號
 
 ## Types
-- Use strict type checking
-- Explicit return types on functions
-- Avoid `any`/`unknown` types
-- Interface types for public APIs
+- 在類別和函數使用型別提示
+- 使用 `typing.Optional`、`typing.List`、`typing.Dict`
+- `Config` 類別使用 `@dataclass` 裝飾器
+- FastAPI 請求使用 `pydantic.BaseModel`
 
 ## Naming Conventions
-- Variables: camelCase
-- Constants: UPPER_SNAKE_CASE
-- Functions: camelCase
-- Classes: PascalCase
-- Files: kebab-case
-- Directories: kebab-case
+- 變量:snake_case (`news_items`, `article_url`)
+- 常數:UPPER_SNAKE_CASE (主要在 Config 類別內)
+- 函數:snake_case (`scrape_articles_concurrently`, `generate_report`)
+- 類別:PascalCase (`AI_News_Agent`, `NewsCrawler`)
+- 檔案:kebab-case (`news_crawler.py`, `config.py`)
+- 目錄:kebab-case (`backend/app/services/`)
 
 ## Error Handling
-- Handle expected errors gracefully
-- Use typed custom errors
-- Always preserve error context
-- Never silently swallow errors
+- 預期錯誤使用 try/except 處理
+- 使用 logging 模組記錄錯誤: `logger.error()`, `logger.warning()`
+- 永不使用空 catch 區塊
+- 保留錯誤上下文: `logger.error(f"錯誤: {e}", exc_info=True)`
+
+**示例**:
+```python
+try:
+    result = some_operation()
+except Exception as e:
+    logger.error(f"操作失敗: {e}", exc_info=True)
+    raise
+```
 
 ## Architecture
-- Keep components small and focused
-- Prefer composition over inheritance
-- Use dependency injection
-- Separate concerns (data, view, logic)
+- 服務導向架構: `api/` (路由), `core/` (核心設定), `services/` (業務邏輯)
+- 依賴注入:服務在建構時接收 `config` 和 `logger`
+- 單例模式:單一 `Config` 類別管理環境變數
+- 優雅降級:多個爬取策略 (crawl4ai → Tavily → BeautifulSoup → RSS)
 
 ## Documentation
-- Document public APIs with docstrings
-- Add comments for non-obvious logic
-- Update README for breaking changes
-- Keep inline comments minimal
+- 公開 API 使用 docstrings
+- 日誌和註解使用繁體中文
+- 更新 `@func.md` 記錄新函數
+- 簡潔的行內註解,僅用於非顯而易見的邏輯
+
+## Logging
+- 使用 `backend.app.core.logger.setup_logger()`
+- 控制台輸出:INFO 級別
+- 檔案輸出:`financial_reports/ai_news_analyzer.log` (DEBUG 級別)
+- API 日誌:`logs/access.log` 和 `logs/error.log`
+
+# Project Structure
+
+```
+AI_News/
+├── AI_News.py                 # 主入口腳本
+├── backend/
+│   ├── app/
+│   │   ├── api/            # FastAPI 路由
+│   │   ├── core/           # 核心模組 (config.py, logger.py)
+│   │   └── services/       # 服務模組 (rss_reader, news_crawler, ai_client, html_generator)
+│   ├── main.py             # FastAPI 主應用程式
+│   └── templates/          # Jinja2 模板
+├── openspec/               # OpenSpec 變更提案和規格
+├── requirements.txt         # 根目錄依賴
+├── func.md               # 函數文檔
+└── README.md
+```
 
 # OpenSpec Workflow
 

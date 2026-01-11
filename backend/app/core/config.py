@@ -70,7 +70,7 @@ class Config:
     )
     CNN_BUSINESS_RSS_URLS: List[str] = field(default_factory=lambda: [])
     MAX_ARTICLES_PER_SOURCE: int = 10
-    MAX_TOTAL_ARTICLES: int = 40
+    MAX_TOTAL_ARTICLES: int = 100
     ALLOWED_DOMAINS: List[str] = field(
         default_factory=lambda: [
             "wsj.com",
