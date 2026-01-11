@@ -1,5 +1,24 @@
 ## ADDED Requirements
 
+### Requirement: 逐一分析新聞
+系統 MUST 採用逐一分析方式處理新聞，避免 AI 模型的上下文容量限制。
+
+#### Scenario: 單篇新聞獨立分析
+- **WHEN** 系統開始分析新聞
+- **THEN** 系統 SHALL 每次只傳送一篇新聞給 AI 模型
+- **AND** 系統 MUST 使用單篇文章分析提示詞（SINGLE_ARTICLE_ANALYSIS_PROMPT）
+
+#### Scenario: 實時保存分析結果
+- **WHEN** 每篇新聞分析完成
+- **THEN** 系統 SHALL 立即將分析結果追加到 Markdown 文件
+- **AND** 日誌 SHALL 顯示「第 X/50 篇新聞分析完成」
+
+#### Scenario: 容錯恢復機制
+- **WHEN** 單篇新聞分析失敗
+- **THEN** 系統 SHALL 記錄錯誤並跳過該篇新聞
+- **AND** 系統 SHALL 繼續分析下一篇新聞
+- **AND** 中斷後可從已保存的 Markdown 繼續處理
+
 ### Requirement: AI 新聞翻譯
 系統 MUST 能夠將英文新聞翻譯成台灣繁體中文。
 

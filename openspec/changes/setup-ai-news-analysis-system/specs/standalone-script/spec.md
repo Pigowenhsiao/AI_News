@@ -1,16 +1,16 @@
 ## ADDED Requirements
 
 ### Requirement: 獨立腳本執行
-系統 MUST 提供獨立執行腳本 `run_analysis.py` 以便 crontab 直接調用。
+系統 MUST 提供獨立執行腳本 `AI_News.py` 以便 crontab 直接調用。
 
 #### Scenario: 成功執行完整分析流程
-- **WHEN** 使用者執行 `python run_analysis.py`
+- **WHEN** 使用者執行 `python AI_News.py`
 - **THEN** 系統 SHALL 執行完整的新聞爬取、AI 分析、HTML 生成流程
 - **AND** 系統 SHALL 輸出執行進度和結果
 - **AND** 系統 SHALL 將 HTML 報告寫入指定路徑
 
 #### Scenario: 指定主題執行
-- **WHEN** 使用者執行 `python run_analysis.py -t "主題名稱"`
+- **WHEN** 使用者執行 `python AI_News.py -t "主題名稱"`
 - **THEN** 系統 MUST 使用指定主題生成報告
 - **AND** 主題 SHALL 出現在 HTML 報告標題中
 
@@ -18,7 +18,7 @@
 系統 MUST 支援命令列參數以自訂執行行為。
 
 #### Scenario: 查看說明訊息
-- **WHEN** 使用者執行 `python run_analysis.py --help`
+- **WHEN** 使用者執行 `python AI_News.py --help`
 - **THEN** 系統 SHALL 顯示所有可用參數和說明
 
 #### Scenario: 指定輸出路徑

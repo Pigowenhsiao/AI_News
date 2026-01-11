@@ -33,10 +33,11 @@
 - **THEN** 頁面 SHALL 自動調整佈局
 - **AND** 頁面 MUST 保持內容可讀性
 
-### Requirement: 暗黑模式支援
-系統輸出的 HTML MUST 支援暗黑模式。
+### Requirement: 暗黑模式支援（暫不實作）
+系統輸出的 HTML SHOULD 支援暗黑模式。
 
 #### Scenario: 切換暗黑模式
 - **WHEN** 使用者選擇暗黑模式
 - **THEN** 頁面 SHALL 顯示暗色主題
 - **AND** 文字對比度 MUST 保持可讀
+- **NOTE**: 此功能目前未實作，可能未來版本加入

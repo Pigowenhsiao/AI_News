@@ -157,7 +157,67 @@ articles = crawler.scrape_articles_concurrently(news_items)
 
 **爬取策略：**
 - CNN 新聞：優先使用 Tavily API → crawl4ai → BeautifulSoup
-- 其他新聞：優先使用 crawl4ai → BeautifulSoup
+- Bloomberg 新聞：優先使用 crawl4ai (with retry) → 改進請求頭 → Tavily API
+- 其他新聞（CNBC、Fortune、Yahoo Finance、MarketWatch）：優先使用 crawl4ai (with retry) → BeautifulSoup
+
+**crawl4ai 優化配置：**
+- 真實瀏覽器 User-Agent
+- 完整瀏覽器請求頭（Accept、Accept-Language 等）
+- 支援重試機制（默認 3 次，Bloomberg 2 次）
+- 禁用外部圖片和 JavaScript 以加速爬取
+- 繞過快取以確保獲取最新內容
+
+---
+
+### NewsCrawler._get_crawl4ai_config() -> (BrowserConfig, CrawlerRunConfig)
+
+**檔案：** `backend/app/services/news_crawler.py`
+
+**功能：** 獲取 crawl4ai 的優化配置
+
+**回傳：**
+- `BrowserConfig`: 瀏覽器配置
+- `CrawlerRunConfig`: 爬取配置
+
+**配置特點：**
+- 真實瀏覽器 User-Agent
+- 完整瀏覽器請求頭
+- 禁用外部圖片
+- 繞過快取
+
+---
+
+### NewsCrawler._crawl_with_crawl4ai_with_retry(url: str, max_retries: int = 3) -> Optional[str]
+
+**檔案：** `backend/app/services/news_crawler.py`
+
+**功能：** 使用 crawl4ai 爬取，支援重試機制
+
+**參數：**
+- `url`: str - 新聞 URL
+- `max_retries`: int - 最多重試次數（默認 3）
+
+**回傳：**
+- `Optional[str]`: 新聞內容，失敗返回 None
+
+**重試機制：**
+- 首次失敗後等待 2 秒重試
+- 連線關閉錯誤（ERR_CONNECTION_CLOSED）後等待 3 秒重試
+- 達到最大重試次數後返回 None
+
+---
+
+### NewsCrawler._crawl_with_crawl4ai(url: str) -> Optional[str]
+
+**檔案：** `backend/app/services/news_crawler.py`
+
+**功能：** 使用 crawl4ai 爬取（內部方法，調用 _crawl_with_crawl4ai_with_retry）
+
+**參數：**
+- `url`: str - 新聞 URL
+
+**回傳：**
+- `Optional[str]`: 新聞內容，失敗返回 None
 
 ---
 

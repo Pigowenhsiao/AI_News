@@ -16,15 +16,15 @@
 ### Requirement: 新聞列表 API
 系統 MUST 提供 `/api/news` 端點以獲取爬取的新聞列表。
 
-#### Scenario: 獲取最新新聞
+#### Scenario: 獲取最新新聞（部分實作）
 - **WHEN** 客戶端發送 GET 請求到 `/api/news`
-- **THEN** 系統 SHALL 返回最新的新聞列表
-- **AND** 回應 MUST 包含標題、連結、來源、日期等資訊
+- **THEN** 系統 SHALL 返回提示訊息（目前功能未完全實作）
+- **AND** 回應 SHALL 建議使用 `/api/report` 查看完整 HTML 報告
 
-#### Scenario: 分頁查詢
+#### Scenario: 分頁查詢（未實作）
 - **WHEN** 客戶端指定 `page` 和 `limit` 參數
-- **THEN** 系統 SHALL 返回對應頁面的新聞
-- **AND** 回應 MUST 包含總數和頁面資訊
+- **THEN** 系統 SHALL 暫時返回提示訊息
+- **NOTE**: 此功能為規格中定義，目前未實作，建議使用 `/api/report` 查看完整報告
 
 ### Requirement: 報告檢視 API
 系統 MUST 提供 `/api/report` 端點以獲取 HTML 報告。

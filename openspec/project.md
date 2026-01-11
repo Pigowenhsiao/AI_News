@@ -1,7 +1,14 @@
 # Project Context
 
 ## Purpose
-基於 AI 的美國財經新聞分析與報告生成系統。系統會自動從 CNBC、CNN Business 等財經媒體網站爬取最新新聞，使用 AI 進行翻譯、分析和專業評論，生成格式化的 HTML 和 Markdown 報告。
+基於 AI 的美國財經新聞分析與報告生成系統。系統會自動從 CNBC、CNN Business、Bloomberg、Fortune、Yahoo Finance、MarketWatch 等財經媒體網站爬取最新新聞，使用 AI 進行翻譯、分析和專業評論，生成格式化的 HTML 和 Markdown 報告。
+
+系統特點：
+- **逐一分析新聞** - 避免模型上下文限制，每篇新聞獨立處理
+- **實時保存** - 每篇新聞分析完成後立即保存到 Markdown 文件
+- **多種爬取策略** - crawl4ai → Tavily API → BeautifulSoup 備用
+- **動態時間顯示** - HTML 報告包含 JavaScript 時間更新功能
+- **RESTful API** - 提供 API 介面供外部系統整合
 
 ## Tech Stack
 - **Python 3.11+**
@@ -75,8 +82,24 @@
 
 ## External Dependencies
 
-- **OpenRouter API** - AI 模型服務（免費模型：mistralai/devstral-2512:free）
-- **Tavily API** - CNN 新聞爬取服務
+### 服務類
+- **OpenRouter API** - AI 模型服務
+  - 主要模型：mistralai/devstral-2512:free
+  - 備用模型：moonshotai/kimi-k2:free, deepseek/deepseek-r1-0528:free
+  - 需要 OPENROUTER_API_KEY 環境變數
+
+- **Tavily API** - CNN/Bloomberg 新聞爬取服務
+  - 需要 TAVILY_API_KEY 環境變數
+  - 用於 CNN Business 網站爬取和 Bloomberg 備用方案
+
+### 資料來源
+- **CNBC RSS** - 新聞來源（https://www.cnbc.com/id/100003114/device/rss/rss.html）
+- **CNN Business** - 網站直接爬取（https://edition.cnn.com/business）
+- **Bloomberg** - 使用 Tavily API 搜尋 + crawl4ai 爬取
+- **Fortune** - 使用 Tavily API 搜尋
+- **Yahoo Finance** - 使用 Tavily API 搜尋
+- **MarketWatch** - 使用 Tavily API 搜尋
+
+### 工具類
 - **Playwright** - 瀏覽器自動化（由 Crawl4AI 使用）
-- **CNBC RSS** - 新聞來源
-- **CNN Business** - 網站直接爬取
+  - 需執行 `playwright install chromium` 安裝瀏覽器

@@ -52,7 +52,7 @@ class NewsCrawler:
 
         if "bloomberg.com" in source_domain:
             try:
-                text = self._crawl_with_crawl4ai(url)
+                text = self._crawl_with_crawl4ai_with_retry(url, max_retries=2)
                 if text and len(text) > self.config.ARTICLE_MIN_LENGTH:
                     self.logger.info(f"Bloomberg 使用 crawl4ai 成功: {url}")
                     return self._clean_control_characters(self._clean_text(text))
@@ -84,12 +84,14 @@ class NewsCrawler:
                     return self._clean_control_characters(self._clean_text(text))
             except Exception as e:
                 self.logger.warning(f"Tavily 爬取失敗: {url} - {e}")
+
         try:
-            text = self._crawl_with_crawl4ai(url)
+            text = self._crawl_with_crawl4ai_with_retry(url, max_retries=2)
             if text and len(text) > self.config.ARTICLE_MIN_LENGTH:
                 return self._clean_control_characters(self._clean_text(text))
         except Exception as e:
             self.logger.warning(f"crawl4ai 爬取失敗: {url} - {e}")
+
         try:
             text = self._scrape_with_beautifulsoup(url, source_domain)
             if text and len(text) > self.config.ARTICLE_MIN_LENGTH:
@@ -98,23 +100,104 @@ class NewsCrawler:
             self.logger.warning(f"BeautifulSoup 爬取失敗: {url} - {e}")
         return None
 
+    def _get_crawl4ai_config(self):
+        """獲取 crawl4ai 的優化配置"""
+        from crawl4ai import BrowserConfig, CrawlerRunConfig
+
+        browser_config = BrowserConfig(
+            headless=True,
+            verbose=False,
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            headers={
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8,zh-TW;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
+            },
+            ignore_https_errors=True,
+        )
+
+        crawler_config = CrawlerRunConfig(
+            cache_mode="bypass",
+            word_count_threshold=10,
+            excluded_tags=["script", "style", "iframe", "noscript"],
+            exclude_external_images=True,
+            js_code=None,
+        )
+
+        return browser_config, crawler_config
+
+    def _crawl_with_crawl4ai_with_retry(
+        self, url: str, max_retries: int = 3
+    ) -> Optional[str]:
+        """使用 crawl4ai 爬取，支援重試"""
+        from crawl4ai import AsyncWebCrawler
+        import asyncio
+        import time
+
+        browser_config, crawler_config = self._get_crawl4ai_config()
+
+        for attempt in range(1, max_retries + 1):
+            try:
+
+                async def fetch():
+                    async with AsyncWebCrawler(
+                        config=browser_config, verbose=False
+                    ) as crawler:
+                        result = await crawler.arun(url=url, config=crawler_config)
+                        return result.markdown if result and result.markdown else None
+
+                text = asyncio.run(fetch())
+
+                if text and len(text) > self.config.ARTICLE_MIN_LENGTH:
+                    self.logger.info(
+                        f"crawl4ai 成功 (嘗試 {attempt}/{max_retries}): {url[:60]}..."
+                    )
+                    return text
+                elif text:
+                    self.logger.warning(
+                        f"crawl4ai 內容較短 (嘗試 {attempt}/{max_retries}): {len(text)} 字符"
+                    )
+                    if attempt < max_retries:
+                        time.sleep(2)
+                        continue
+                    return text
+                else:
+                    self.logger.warning(
+                        f"crawl4ai 返回空內容 (嘗試 {attempt}/{max_retries})"
+                    )
+                    if attempt < max_retries:
+                        time.sleep(2)
+                        continue
+                    return None
+
+            except ImportError:
+                self.logger.debug("crawl4ai 未安裝,使用備用方法")
+                return None
+            except Exception as e:
+                error_msg = str(e)
+                if "ERR_CONNECTION_CLOSED" in error_msg:
+                    self.logger.warning(
+                        f"crawl4ai 連線被關閉 (嘗試 {attempt}/{max_retries}): {e}"
+                    )
+                else:
+                    self.logger.warning(
+                        f"crawl4ai 錯誤 (嘗試 {attempt}/{max_retries}): {e}"
+                    )
+
+                if attempt < max_retries:
+                    self.logger.info("等待 3 秒後重試...")
+                    time.sleep(3)
+                    continue
+                return None
+
+        self.logger.error(f"crawl4ai 在 {max_retries} 次重試後仍然失敗: {url}")
+        return None
+
     def _crawl_with_crawl4ai(self, url: str) -> Optional[str]:
-        try:
-            from crawl4ai import AsyncWebCrawler
-            import asyncio
-
-            async def fetch():
-                async with AsyncWebCrawler(verbose=False) as crawler:
-                    result = await crawler.arun(url=url)
-                    return result.markdown if result and result.markdown else None
-
-            return asyncio.run(fetch())
-        except ImportError:
-            self.logger.debug("crawl4ai 未安裝,使用備用方法")
-            return None
-        except Exception as e:
-            self.logger.debug(f"crawl4ai 執行失敗: {e}")
-            return None
+        """使用 crawl4ai 爬取（內部方法，重試邏輯已移至 _crawl_with_crawl4ai_with_retry）"""
+        return self._crawl_with_crawl4ai_with_retry(url, max_retries=3)
 
     def _scrape_with_tavily(self, url: str) -> Optional[str]:
         try:
