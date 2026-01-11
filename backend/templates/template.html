@@ -4,182 +4,587 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
-            line-height: 1.8;
-            color: #333;
-            background: #f5f5f5;
-            padding: 20px;
+        :root {
+            --color-primary: #1a1a2e;
+            --color-accent: #16213e;
+            --color-gold: #d4af37;
+            --color-gold-light: #f4e4ba;
+            --color-surface: #fafafa;
+            --color-text: #1a1a1a;
+            --color-text-secondary: #6b7280;
+            --color-border: #e5e7eb;
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --font-display: 'Cormorant Garamond', serif;
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
         }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            line-height: 1.8;
+            color: var(--color-text);
+            background: var(--color-surface);
+            padding: 40px 20px;
+        }
+
+        .background-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.03;
+            background-image: 
+                radial-gradient(circle at 25% 25%, var(--color-primary) 2%, transparent 2%),
+                radial-gradient(circle at 75% 75%, var(--color-gold) 2%, transparent 2%);
+            background-size: 60px 60px;
+        }
+
         .container {
-            max-width: 900px;
+            max-width: 960px;
             margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .paper {
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeSlideUp 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeSlideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+            color: white;
+            padding: 60px 40px;
+            position: relative;
             overflow: hidden;
         }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--color-gold) 0%, transparent 70%);
+            opacity: 0.1;
+            border-radius: 50%;
         }
-        .header h1 { font-size: 1.8rem; margin-bottom: 10px; }
-        .header .meta { 
-            font-size: 0.9rem; 
-            opacity: 0.9; 
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--color-gold-light) 0%, transparent 70%);
+            opacity: 0.08;
+            border-radius: 50%;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-meta {
             display: flex;
-            justify-content: center;
-            gap: 20px;
             flex-wrap: wrap;
+            gap: 32px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            opacity: 0.95;
         }
-        .header .meta-item { display: flex; align-items: center; gap: 5px; }
-        .header .meta-label { font-weight: 500; opacity: 0.8; }
-        .header .meta-value { font-weight: 600; }
-        
-        .header .time-status {
-            margin-top: 10px;
-            font-size: 0.9rem;
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .meta-label {
+            font-weight: 300;
+            opacity: 0.8;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .meta-value {
             font-weight: 600;
-            padding: 10px 20px;
-            background: rgba(255,255,255,0.25);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 10px;
             border-radius: 4px;
-            display: inline-block;
-            color: #ffffff;
         }
-        .header .time-status.updating { color: #ff9800; animation: pulse 2s infinite; }
-        .header .time-status.ok { color: #ffffff; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+        .time-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: rgba(212, 175, 55, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: var(--color-gold-light);
+            animation: fadeIn 0.6s ease-out 0.4s both;
         }
-        
+
+        .time-status.updating {
+            color: #ff6b6b;
+            border-color: rgba(255, 107, 107, 0.3);
+        }
+
+        .time-status.ok {
+            color: var(--color-gold-light);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .content-wrapper {
+            padding: 48px 40px;
+        }
+
         .market-summary {
-            background: #e3f2fd;
-            padding: 20px;
-            border-left: 4px solid #2196f3;
-            margin: 20px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.02) 100%);
+            border-left: 4px solid var(--color-success);
+            padding: 32px;
+            margin-bottom: 40px;
+            border-radius: 0 8px 8px 0;
+            position: relative;
+            animation: slideInRight 0.6s ease-out 0.2s both;
         }
-        .market-summary h3 { color: #1976d2; margin-bottom: 10px; }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .market-summary::before {
+            content: '📊';
+            position: absolute;
+            top: -15px;
+            left: -15px;
+            width: 32px;
+            height: 32px;
+            background: var(--color-success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .market-summary h3 {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            color: var(--color-primary);
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+
         .article {
-            padding: 20px;
-            border-bottom: 1px solid #eee;
+            padding: 40px 0;
+            border-bottom: 1px solid var(--color-border);
+            position: relative;
         }
-        .article:last-child { border-bottom: none; }
+
+        .article::before {
+            content: '';
+            position: absolute;
+            left: -40px;
+            top: 40px;
+            width: 3px;
+            height: 60px;
+            background: linear-gradient(to bottom, var(--color-gold), transparent);
+            opacity: 0.3;
+        }
+
+        .article:last-child {
+            border-bottom: none;
+            padding-bottom: 20px;
+        }
+
+        .article-number {
+            display: inline-block;
+            font-family: var(--font-display);
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--color-gold);
+            opacity: 0.2;
+            line-height: 1;
+            margin-right: 16px;
+            vertical-align: -12px;
+        }
+
         .article h2 {
-            color: #333;
-            font-size: 1.4rem;
-            margin-bottom: 10px;
+            display: inline-flex;
+            align-items: baseline;
+            font-size: 1.6rem;
+            color: var(--color-primary);
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.4;
         }
+
         .article .meta {
-            color: #666;
+            color: var(--color-text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-family: var(--font-mono);
             font-size: 0.85rem;
-            margin-bottom: 15px;
         }
-        .article .meta a { color: #2196f3; text-decoration: none; }
-        .article .meta a:hover { text-decoration: underline; }
-        .section { margin: 15px 0; }
-        .section h3 { color: #555; font-size: 1.1rem; margin-bottom: 8px; }
-        .section-content { padding-left: 15px; color: #444; }
+
+        .article .meta a {
+            color: var(--color-gold);
+            text-decoration: none;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .article .meta a::after {
+            content: '→';
+            margin-left: 4px;
+            transition: margin-left 0.2s ease;
+        }
+
+        .article .meta a:hover::after {
+            margin-left: 8px;
+        }
+
+        .section {
+            margin: 28px 0;
+        }
+
+        .section h3 {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            color: var(--color-accent);
+            margin-bottom: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section h3::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(to right, var(--color-border), transparent);
+        }
+
+        .section-content {
+            padding-left: 0;
+            color: var(--color-text);
+            line-height: 1.9;
+            font-size: 1.05rem;
+        }
+
+        .section-content p {
+            margin-bottom: 1.2em;
+        }
+
         .comment {
-            background: #fff3e0;
-            padding: 15px;
-            border-radius: 4px;
-            margin-top: 15px;
-            border-left: 3px solid #ff9800;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.03) 100%);
+            padding: 28px;
+            border-radius: 8px;
+            margin-top: 28px;
+            border-left: 3px solid var(--color-gold);
+            position: relative;
         }
-        .comment h3 { color: #e65100; }
+
+        .comment::before {
+            content: '💡';
+            position: absolute;
+            top: -12px;
+            left: -12px;
+            width: 32px;
+            height: 32px;
+            background: var(--color-gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .comment h3 {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            color: var(--color-primary);
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
         .footer {
             text-align: center;
-            padding: 20px;
-            color: #999;
+            padding: 40px;
+            color: var(--color-text-secondary);
             font-size: 0.85rem;
-            border-top: 1px solid #eee;
+            border-top: 1px solid var(--color-border);
+            margin-top: 40px;
+            font-family: var(--font-mono);
         }
-        @media (max-width: 600px) {
-            body { padding: 10px; }
-            .header { padding: 20px; }
-            .header h1 { font-size: 1.4rem; }
-            .article { padding: 15px; }
-            .header .meta { flex-direction: column; }
+
+        .footer p {
+            margin-bottom: 8px;
+        }
+
+        .footer a {
+            color: var(--color-gold);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* 滾動觸發動畫 */
+        .article, .market-summary {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .article.visible, .market-summary.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 10px;
+            }
+
+            .header {
+                padding: 40px 24px;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .header-meta {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .content-wrapper {
+                padding: 32px 24px;
+            }
+
+            .article {
+                padding: 32px 0;
+            }
+
+            .article-number {
+                font-size: 2rem;
+                margin-right: 12px;
+            }
+
+            .article h2 {
+                font-size: 1.3rem;
+            }
+
+            .time-status {
+                font-size: 0.85rem;
+                padding: 10px 16px;
+            }
+
+            .article::before {
+                display: none;
+            }
+        }
+
+        /* 打印樣式 */
+        @media print {
+            body {
+                padding: 0;
+                background: white;
+            }
+
+            .background-pattern {
+                display: none;
+            }
+
+            .paper {
+                box-shadow: none;
+            }
+
+            .time-status {
+                display: none;
+            }
+        }
+
+        /* 暗黑模式支持 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-primary: #0d0d1a;
+                --color-accent: #0f0f23;
+                --color-surface: #0a0a0f;
+                --color-text: #e5e5e5;
+                --color-text-secondary: #9ca3af;
+                --color-border: #1f2937;
+            }
+
+            .market-summary {
+                background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+            }
+
+            .comment {
+                background: linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, rgba(212, 175, 55, 0.05) 100%);
+            }
         }
     </style>
 </head>
 <body>
+    <div class="background-pattern"></div>
     <div class="container">
-        <div class="header">
-            <h1>{{ title }}</h1>
-            <div class="meta">
-                <div class="meta-item">
-                    <span class="meta-label">🤖 AI 模型:</span>
-                    <span class="meta-value">{{ ai_model }}</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">🖥 主機:</span>
-                    <span class="meta-value">{{ hostname }}</span>
+        <div class="paper">
+            <div class="header">
+                <div class="header-content">
+                    <h1>{{ title }}</h1>
+                    <div class="header-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">AI Model</span>
+                            <span class="meta-value">{{ ai_model }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Host</span>
+                            <span class="meta-value">{{ hostname }}</span>
+                        </div>
+                    </div>
+                    <div class="header-meta" style="margin-bottom: 16px;">
+                        <div class="meta-item">
+                            <span class="meta-label">Generated</span>
+                            <span class="meta-value" id="generation-time">{{ html_gen_time }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Article Date</span>
+                            <span class="meta-value">{{ article_gen_time }}</span>
+                        </div>
+                    </div>
+                    <div id="time-status" class="time-status">
+                        <span id="time-text">🕒 Live Clock</span>
+                    </div>
                 </div>
             </div>
-            <div class="meta">
-                <div class="meta-item">
-                    <span class="meta-label">📄 生成時間:</span>
-                    <span class="meta-value" id="generation-time">{{ html_gen_time }}</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">📝 文章日期:</span>
-                    <span class="meta-value">{{ article_gen_time }}</span>
-                </div>
-            </div>
-            <div id="time-status" class="time-status ok">
-                <span id="time-text">🕒 時間更新中...</span>
-            </div>
-        </div>
 
-        {% if market_summary_html %}
-        <div class="market-summary">
-            <h3>📊 本日市場總評</h3>
-            <div class="section-content">{{ market_summary_html }}</div>
-        </div>
-        {% endif %}
+            <div class="content-wrapper">
+                {% if market_summary_html %}
+                <div class="market-summary">
+                    <h3>Market Summary</h3>
+                    <div class="section-content">{{ market_summary_html }}</div>
+                </div>
+                {% endif %}
 
-        {% for article in articles %}
-        <article class="article">
-            <h2>{{ loop.index }}. {{ article.title }}</h2>
-            <div class="meta">
-                📅 {{ article.date }} | 📰 來源: <a href="{{ article.url }}" target="_blank">{{ article.source }}</a>
+                {% for article in articles %}
+                <article class="article" data-article-index="{{ loop.index }}">
+                    <h2><span class="article-number">{{ loop.index }}</span>{{ article.title }}</h2>
+                    <div class="meta">
+                        <span>📅 {{ article.date }}</span>
+                        <span>📰 Source: <a href="{{ article.url }}" target="_blank">{{ article.source }}</a></span>
+                    </div>
+                    <div class="section">
+                        <h3>Content</h3>
+                        <div class="section-content">{{ article.content_html }}</div>
+                    </div>
+                    {% if article.comment_html %}
+                    <div class="comment">
+                        <h3>Professional Commentary</h3>
+                        <div class="section-content">{{ article.comment_html }}</div>
+                    </div>
+                    {% endif %}
+                </article>
+                {% endfor %}
             </div>
-            <div class="section">
-                <h3>📝 內容</h3>
-                <div class="section-content">{{ article.content_html }}</div>
-            </div>
-            {% if article.comment_html %}
-            <div class="comment">
-                <h3>💡 專業評論</h3>
-                <div class="section-content">{{ article.comment_html }}</div>
-            </div>
-            {% endif %}
-        </article>
-        {% endfor %}
 
-        <div class="footer">
-            <p>AI News 分析系統 | 主機: {{ hostname }} | 文章時間: {{ article_gen_time }}</p>
-            <p>&copy; {{ current_year }} Generated by AI News Analysis System</p>
+            <div class="footer">
+                <p>AI News Analysis System | Host: {{ hostname }} | Article Time: {{ article_gen_time }}</p>
+                <p>&copy; {{ current_year }} Generated by AI News Analysis System</p>
+            </div>
         </div>
     </div>
 
     <script>
-        // 時間更新功能
         const generationTime = "{{ html_gen_time }}";
         const articleTime = "{{ article_gen_time }}";
         const timeStatusEl = document.getElementById('time-status');
         const timeTextEl = document.getElementById('time-text');
-        
+
         function updateTime() {
             const now = new Date();
-            
-            // 格式化時間
             const timeStr = now.toLocaleString('zh-TW', {
                 year: 'numeric',
                 month: '2-digit',
@@ -189,19 +594,14 @@
                 second: '2-digit',
                 hour12: false
             });
-            
-            // 更新狀態
+
             timeTextEl.textContent = '🕒 ' + timeStr;
             timeStatusEl.className = 'time-status ok';
         }
-        
-        // 初始更新
+
         updateTime();
-        
-        // 每秒更新一次
         const timer = setInterval(updateTime, 1000);
-        
-        // 頁面可見時啟動，隱藏時暫停以節省資源
+
         document.addEventListener('visibilitychange', function() {
             if (document.visibilityState === 'visible') {
                 updateTime();
@@ -210,10 +610,39 @@
                 timeStatusEl.classList.add('updating');
             }
         });
-        
-        // 頁面關閉時清除定時器
+
         window.addEventListener('beforeunload', function() {
             clearInterval(timer);
+        });
+
+        // 滾動觸發動畫
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.article, .market-summary').forEach(el => {
+            observer.observe(el);
+        });
+
+        // 平滑滾動到錨點
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
         });
     </script>
 </body>
