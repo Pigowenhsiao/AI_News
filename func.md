@@ -235,26 +235,148 @@ articles = crawler.scrape_articles_concurrently(news_items)
 
 ---
 
-### AIModelClient.call(prompt: str, model_name: str, max_model_failures: int = 3) -> Optional[str]
+### AIModelClient
 
 **檔案：** `backend/app/services/ai_client.py`
 
-**功能：** 呼叫 OpenRouter AI 模型進行文字生成，支援自動切換模型
+**功能：** AI 模型客戶端，支援 OpenRouter 和 Ollama 兩種 Provider，可通過 config.ini 切換
+
+**主要屬性：**
+- `current_provider`: str - 當前 Provider（auto/openrouter/ollama）
+- `ollama_base_url`: str - Ollama 伺服器 URL
+- `ollama_preferred_models`: List[str] - 優先使用的 Ollama 模型列表
+- `available_ollama_models`: List[str] - 本地可用 Ollama 模型列表
+
+**主要方法：**
+
+#### call(prompt: str, model_name: str = None, max_model_failures: int = 3) -> Optional[str]
+
+**功能：** 統一呼叫入口，根據 provider 選擇 OpenRouter 或 Ollama
 
 **參數：**
-- `prompt`: str - 提示詞
-- `model_name`: str - 模型名稱
-- `max_model_failures`: int - 最多嘗試多少個模型
+- `prompt`: str - 提示內容
+- `model_name`: str - 模型名稱（可選）
+- `max_model_failures`: int - 最多模型失敗次數（默認 3）
 
 **回傳：**
-- `Optional[str]`: AI 生成的文字，失敗返回 None
+- `Optional[str]`: AI 回應，失敗時返回 None
+
+**Provider 行為：**
+- **auto**: 優先 OpenRouter，失敗後 fallback 到 Ollama
+- **openrouter**: 只使用 OpenRouter
+- **ollama**: 只使用 Ollama
 
 **使用方式：**
 ```python
 from backend.app.services.ai_client import AIModelClient
-client = AIModelClient(config, logger)
-result = client.call("請翻譯以下文字...", "mistralai/devstral-2512:free")
+
+ai_client = AIModelClient(config, logger)
+result = ai_client.call("請用一句話說明什麼是 AI。")
 ```
+
+#### _call_openrouter(prompt: str, model_name: str) -> Optional[str]
+
+**功能：** 呼叫 OpenRouter API
+
+**參數：**
+- `prompt`: str - 提示內容
+- `model_name`: str - 模型名稱
+
+**回傳：**
+- `Optional[str]`: AI 回應，失敗時返回 None
+
+**重試機制：**
+- 支援 3 次重試（可配置）
+- 401 Unauthorized 不重試，直接返回 None
+- 其他錯誤會指數退避重試
+
+#### _call_ollama_chat(prompt: str, model_name: str) -> Optional[str]
+
+**功能：** 呼叫 Ollama API
+
+**參數：**
+- `prompt`: str - 提示內容
+- `model_name`: str - 模型名稱
+
+**回傳：**
+- `Optional[str]`: AI 回應，失敗時會嘗試其他模型
+
+**系統提示：** 自動添加「請使用台灣繁體中文回答，避免簡體字。」
+
+**模型選擇邏輯：**
+1. 優先使用指定的模型
+2. 如果模型失敗，嘗試其他本地模型
+3. 排除 VL 類型模型（qwen3-vl 等）
+4. 如果啟用 cloud 優先，優先嘗試 cloud 模型
+
+#### _try_ollama_models_implicitly(prompt: str, exclude: bool = False) -> Optional[str]
+
+**功能：** 隱性嘗試 Ollama 模型（當指定模型失效時）
+
+**參數：**
+- `prompt`: str - 提示內容
+- `exclude`: bool - 是否跳過隱性嘗試（默認 False）
+
+**回傳：**
+- `Optional[str]`: AI 回應，失敗時返回 None
+
+**模型嘗試順序：**
+1. 優先嘗試 cloud 模型（如果啟用）
+2. 如果啟用 try_all_models，嘗試所有本地模型
+3. 跳過已經嘗試過的模型
+4. 跳過被排除的模型（VL 類型）
+
+---
+
+### AIModelClient 初始化
+
+**功能：** 建立 AIModelClient 實例，設定默認值
+
+**參數：**
+- `config`: Config - 配置實例
+- `logger`: logging.Logger - 日誌實例
+
+**默認配置：**
+- `AI_PROVIDER`: "auto"
+- `OLLAMA_BASE_URL`: "http://192.168.2.192:11434"
+- `OLLAMA_PREFERRED_MODELS`: ["ministral-3:14b-cloud", "ministral-3:8b-cloud", "ministral-3:3b-cloud", "gpt-oss:20b-cloud"]
+- `OLLAMA_EXCLUDE_NAME_KEYWORDS`: ["vl", "qwen3-vl"]
+- `OLLAMA_PREFER_CLOUD_MODELS`: True
+- `OLLAMA_TRY_ALL_MODELS`: True
+- `OLLAMA_ON_ALL_FAIL`: "terminate"
+
+---
+
+### config.ini AI Provider 設定
+
+**檔案：** `config.ini`
+
+**功能：** 配置 AI Provider 和 Ollama 相關設定
+
+**AI Section:**
+```ini
+[AI]
+provider = auto  # auto / ollama / openrouter
+ollama_base_url = http://192.168.2.192:11434
+ollama_preferred_models = ministral-3:14b-cloud, ministral-3:8b-cloud
+ollama_prefer_cloud_models = true
+ollama_try_all_models = true
+ollama_exclude_name_keywords = vl,qwen3-vl
+ollama_on_all_fail = terminate  # terminate / fallback_openrouter
+```
+
+**設定說明：**
+- `provider`: Provider 選擇（auto 優先 OpenRouter）
+- `ollama_base_url`: Ollama 伺服器 URL
+- `ollama_preferred_models`: 優先使用的 Ollama 模型（逗號分隔）
+- `ollama_prefer_cloud_models`: 是否優先嘗試 cloud 模型
+- `ollama_try_all_models`: 是否嘗試所有可用模型
+- `ollama_exclude_name_keywords`: 排除模型名稱中的關鍵詞（逗號分隔）
+- `ollama_on_all_fail`: 所有模型失敗時的行為（terminate / fallback_openrouter）
+
+**動態載入：**
+- AI_News.py 啟動時會讀取 config.ini
+- 根據設定動態更新 AIModelClient 的屬性
 
 ---
 

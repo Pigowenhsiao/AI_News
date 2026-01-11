@@ -11,6 +11,7 @@ from typing import Optional
 import smtplib
 from email.mime.text import MIMEText
 import ssl
+import configparser
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -35,6 +36,33 @@ class AI_News_Agent:
     def run(self, topic: str) -> bool:
         process_start_time = time.time()
         self.logger.info(f"🚀 === 開始執行 AI News 分析: {topic} === 🚀")
+
+        # 從 config.ini 動態讀取 AI Provider 配置（不修改 Config 類別）
+        parser = configparser.ConfigParser()
+        config_ini_path = Path(__file__).parent / "config.ini"
+        if config_ini_path.exists():
+            parser.read(config_ini_path, encoding="utf-8")
+
+            ai_provider = parser.get("AI", "provider", fallback="auto").strip()
+            self.logger.info(f"從 config.ini 讀取 AI Provider: {ai_provider}")
+
+            # 更新 AI client 的 provider（如果設定了 openrouter 就設定為它）
+            if ai_provider == "openrouter":
+                self.ai_client.current_provider = "openrouter"
+            elif ai_provider == "ollama":
+                self.ai_client.current_provider = "ollama"
+            else:
+                self.ai_client.current_provider = "auto"
+
+            # Ollama 基礎 URL（如果 config.ini 有設定就使用它）
+            if parser.has_option("AI", "ollama_base_url"):
+                self.ai_client.ollama_base_url = parser.get(
+                    "AI", "ollama_base_url"
+                ).strip()
+                self.logger.info(
+                    f"從 config.ini 讀取 Ollama Base URL: {self.ai_client.ollama_base_url}"
+                )
+
         try:
             rss_items = self.rss_reader.fetch_all_rss()
             if not rss_items:
@@ -49,6 +77,14 @@ class AI_News_Agent:
                 self.logger.warning("未爬取到任何新聞內容")
                 self._send_failure_notification("未爬取到任何新聞內容")
                 return False
+
+            # AI 分析前，檢查 provider 狀態
+            provider_status = f"Provider: {self.ai_client.current_provider}"
+            self.logger.info(provider_status)
+            if self.ai_client.current_provider == "ollama":
+                self.logger.info("目前使用 Ollama Provider")
+            elif self.ai_client.current_provider == "openrouter":
+                self.logger.info("目前使用 OpenRouter Provider")
 
             markdown_report = self._generate_markdown_report_sequentially(
                 articles_with_content, topic
@@ -118,9 +154,15 @@ class AI_News_Agent:
             )
             self.logger.info(f"📍 來源: {display_name} ({article['source_domain']})")
 
-            analyzed_part = self.ai_client.call(
-                full_prompt, self.config.ANALYSIS_OUTPUT_MODEL
-            )
+            try:
+                analyzed_part = self.ai_client.call(
+                    full_prompt, self.config.ANALYSIS_OUTPUT_MODEL
+                )
+            except RuntimeError as e:
+                # AI 全部失敗（Ollama/OpenRouter 都掛），直接終止流程
+                self.logger.critical(f"❌ {e}")
+                self._send_failure_notification(f"AI 模型全部失效：{e}")
+                return ""
 
             if not analyzed_part:
                 self.logger.warning(f"第 {i} 篇新聞分析失敗,跳過")
