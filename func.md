@@ -212,11 +212,73 @@ result = client.call("請翻譯以下文字...", "mistralai/devstral-2512:free")
 **回傳：**
 - `bool`: 成功返回 True，失敗返回 False
 
+**特點：**
+- 自動清理新聞內容中的裝飾性元素（導航連結、Logo、客服訊息）
+- 移除無意義的裝飾性圖片
+- 過濾質量不佳的 AI 評論（短評論、客服訊息、空泛內容）
+- 只保留有實質見解的專業評論
+
 **使用方式：**
 ```python
 from backend.app.services.html_generator import HTMLGenerator
 generator = HTMLGenerator(config, logger)
 success = generator.parse_and_render_html(md_report, summary, "主題")
+```
+
+---
+
+### HTMLGenerator._clean_markdown_content(content: str) -> str
+
+**檔案：** `backend/app/services/html_generator.py`
+
+**功能：** 清理 Markdown 內容，移除裝飾性元素和無意義內容
+
+**參數：**
+- `content`: str - 原始 Markdown 內容
+
+**回傳：**
+- `str`: 清理後的 Markdown 內容
+
+**過濾內容：**
+- 導航連結（如：[市場]、[商業]、[投資]）
+- CNBC Logo 和裝飾性圖片
+- 頁面底部連結（聯繫我們、隱私政策等）
+- 純連結行和過長的導航欄
+- 客服訊息（如：聯繫我們、訂閱等）
+
+**使用方式：**
+```python
+from backend.app.services.html_generator import HTMLGenerator
+generator = HTMLGenerator(config, logger)
+cleaned = generator._clean_markdown_content(raw_content)
+```
+
+---
+
+### HTMLGenerator._is_comment_meaningful(comment: str, content: str) -> bool
+
+**檔案：** `backend/app/services/html_generator.py`
+
+**功能：** 檢查評論是否有實質意義
+
+**參數：**
+- `comment`: str - 評論內容
+- `content`: str - 新聞內容（用於檢查相似度）
+
+**回傳：**
+- `bool`: True 表示評論有意義，False 表示需要移除
+
+**判斷標準：**
+- 評論長度 < 50 字符 → False
+- 包含客服訊息（如：請聯繫、如需更多資訊）→ False
+- 只是空泛的結尾語（如：總體而言、總的來說）且無其他內容 → False
+- 與新聞內容重複度 > 80% → False
+
+**使用方式：**
+```python
+from backend.app.services.html_generator import HTMLGenerator
+generator = HTMLGenerator(config, logger)
+is_good = generator._is_comment_meaningful(comment, news_content)
 ```
 
 ---
